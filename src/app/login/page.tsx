@@ -8,7 +8,7 @@ export default function Login() {
                 {/* Login box */}
                 <form className="border-2 border-solid rounded-sm p-4 bg-white text-xl">
                     {/* Title */}
-                    <h2 className="underline text-2xl mb-6">Login</h2>
+                    <h2 className="font-bold text-3xl mb-4">Login</h2>
 
                     {/* User & Pass */}
                     <div className="text-left mb-4">
