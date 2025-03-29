@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
+  --background: #ffffff; /* custom variables that can be referenced globally */
   --foreground: #171717;
 }
 
