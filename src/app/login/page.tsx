@@ -11,21 +11,21 @@ export default function Login() {
                     <h2 className="underline text-2xl mb-6">Login</h2>
 
                     {/* User & Pass */}
-                    <div className="bg-blue-50 text-left">
+                    <div className="text-left mb-4">
                         <label htmlFor="username" className="block font-bold mb-2">Username:</label>
-                        <input className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="username" type="text" placeholder="Username" />
+                        <input className="shadow-md appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:shadow-outline" id="username" type="text" placeholder="Username" />
                     </div>
-                    <div className="bg-blue-50 text-left">
-                        <label htmlFor="password" className="block text-gray-700 font-bold mb-2">Password:</label>
-                        <input className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="username" type="text" placeholder="Password" />
+                    <div className="text-left">
+                        <label htmlFor="password" className="block font-bold mb-2">Password:</label>
+                        <input className="shadow-md appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:shadow-outline" id="password" type="password" placeholder="Password" />
                     </div>
 
                     {/* Submit & Forgot password */}
                     <div className="flex items-center justify-between mt-6">
-                        <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="button">
+                        <button className="bg-gray-800 hover:bg-black text-white font-bold py-2 px-4 rounded focus:shadow-outline" type="button">
                             Sign In
                         </button>
-                        <a className="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800" href="#">
+                        <a className="inline-block align-baseline font-bold text-base text-gray-800 hover:text-black" href="#">
                             Forgot Password?
                         </a>
                     </div>
