@@ -30,77 +30,18 @@ if __name__ == "__main__":
     cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 
-<<<<<<< HEAD
-
-# Get frame dimensions
-ret, frame = cam.read()
-if not ret:
-    exit()
-    
-frame_height, frame_width = frame.shape[:2]
-
-# Create a mask for the bottom part of the frame
-# This will mask the bottom 30% of the frame - adjust the percentage as needed
-mask_height = int(frame_height * 0.3)#here                                                    # 30% of the frame height
-motion_mask = np.ones((frame_height, frame_width), dtype=np.uint8) * 255
-motion_mask[frame_height - mask_height:frame_height, :] = 0  # Bottom part is masked (black)
-
-# Background subtractor setup
-bg_subtractor = cv2.createBackgroundSubtractorMOG2(
-    history=500, 
-    varThreshold=25, 
-    detectShadows=False
-)
-MIN_MOTION_AREA = 500  # Minimum contour area to consider as motion
-COOLDOWN = 2.0  # Seconds between motion triggers
-last_motion_time = 0
-frame_count = 0
-capture_pending = False
-
-uri = "MONGODBURI"
-# Create a new client and connect to the server
-client = MongoClient(uri, server_api=ServerApi('1'))
-db = client["MONGODB"]
-collection = db["trashcans"]
-capture_counter = 0
-
-isRecyclable = 0
-
-def rotateArduino(recylclable):
-    ser = serial.Serial('/dev/ttyACM1', 9600, timeout=1)
-    ser.flush()
-
-    if recylclable:
-        #rotate to the right
-        ser.write(b"1\n")
-    else:
-        #rotate to the left
-        ser.write(b"0\n")
-    time.sleep(3)
-
-
-
-try:
-    while True:
-        ret, frame = cam.read()
-        if not ret:
-            break
-
-        current_time = time.time()
-=======
     # Get frame dimensions
     ret, frame = cam.read()
     if not ret:
         exit()
->>>>>>> 820359cb8cea9ce6fc31894fb8f1bae9ab1a56d3
         
     frame_height, frame_width = frame.shape[:2]
 
-# Create a mask for the bottom part of the frame
-# This will mask the bottom 30% of the frame - adjust the percentage as needed
-mask_height = int(frame_height * 0.3)#here                                                    # 30% of the frame height
-motion_mask = np.ones((frame_height, frame_width), dtype=np.uint8) * 255
-motion_mask[frame_height - mask_height:frame_height, :] = 0  # Bottom part is masked (black)
+    # Create a mask for the bottom part of the frame
+    # This will mask the bottom 30% of the frame - adjust the percentage as needed
+    mask_height = int(frame_height * 0.3)#here                                                    # 30% of the frame height
+    motion_mask = np.ones((frame_height, frame_width), dtype=np.uint8) * 255
+    motion_mask[frame_height - mask_height:frame_height, :] = 0  # Bottom part is masked (black)
 
     # Background subtractor setup
     bg_subtractor = cv2.createBackgroundSubtractorMOG2(
@@ -109,15 +50,12 @@ motion_mask[frame_height - mask_height:frame_height, :] = 0  # Bottom part is ma
         detectShadows=False
     )
     MIN_MOTION_AREA = 500  # Minimum contour area to consider as motion
-    COOLDOWN = 2.0  # Seconds between motion triggers
-    last_motion_time = 0
     frame_count = 0
-    capture_pending = False
 
-    uri = "MONGODBURI"
+    uri = "mongodb+srv://johnsmith1january2000:a3mlYLp6QoCGcb2a@cluster0.4tz7xfs.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
     # Create a new client and connect to the server
     client = MongoClient(uri, server_api=ServerApi('1'))
-    db = client["MONGODB"]
+    db = client["trashDatabase"]
     collection = db["trashcans"]
     capture_counter = 0
 
@@ -184,53 +122,31 @@ motion_mask[frame_height - mask_height:frame_height, :] = 0  # Bottom part is ma
                             else:
                                 ser.write(b"0\n")
 
-                                # await response
-                                lines = []
-                                while len(lines) < 2:
-                                    line = ser.readline().decode('utf-8').rstrip()
-                                    if ":" in line:
-                                        lines.append(line)
-                                    
-                                try:
-                                    collection.update_one(
-                                        {"_id": ObjectId("OBJECTID")},
-                                        {
-                                            "$push": {
-                                                "lastObjects": className,
-                                                "lastTime": datetime.now()
-                                            },
-                                            "$inc": {"capacity": 1}
-                                        }
-                                    )
-                                    print(f"Database updated for capture {capture_counter}")
-                                except Exception as e:
-                                    print(f"Error updating document: {e}")
-                    
-                    capture_pending = False
-                    capture_counter += 1
+                            # await response
+                            lines = []
+                            while len(lines) < 2:
+                                line = ser.readline().decode('utf-8').rstrip()
+                                if ":" in line:
+                                    lines.append(line)
 
-
-    
+                            capacity = (int(lines[0].split(":")[-1]) + int(lines[1].split(":")[-1]))
+                                
+                            try:
+                                collection.update_one(
+                                    {"_id": ObjectId("67e8bae3020bb4a8bde161ed")},
+                                    {
+                                        "$push": {
+                                            "lastObjects": response.lower(),
+                                            "lastTime": datetime.now()
+                                        },
+                                        "$set":{"capacity": capacity}
+                                    }
+                                )
+                                print(f"Database updated for capture {capture_counter}, class: {response.lower()}")
+                            except Exception as e:
+                                print(f"Error updating document: {e}")
                 
-                # Start a thread for delayed capture
-                capture_thread = threading.Thread(target=inline_capture)
-                capture_thread.daemon = True
-                capture_thread.start()
-                
-
-<<<<<<< HEAD
-
- 
-            
-            # Start a thread for delayed capture
-            capture_thread = threading.Thread(target=inline_capture)
-            capture_thread.daemon = True
-            capture_thread.start()
-            
-            rotateArduino(isRecyclable)
-finally:
-    cam.release()
-=======
+                capture_counter += 1
+                motion_detected = False
     finally:
         cam.release()
->>>>>>> 820359cb8cea9ce6fc31894fb8f1bae9ab1a56d3
