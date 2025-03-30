@@ -12,17 +12,16 @@ from pymongo.server_api import ServerApi
 from datetime import datetime
 from bson.objectid import ObjectId
 
+from google import genai
+from google.genai import types
+import PIL.Image
+
 if __name__ == "__main__":
-    # Initialize Roboflow model
-    rf = roboflow.Roboflow("ROBOFLOWAPIKEY")
-    project = rf.workspace().project("ROBOFLOWWORKSPACE")
-    model = project.version("3").model
-    model.confidence = 50
-    model.overlap = 25
 
     # Configuration
     OUTPUT_FOLDER = "captures"
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+
 
     # Initialize camera
     cam = cv2.VideoCapture('/dev/video0')
@@ -51,15 +50,12 @@ if __name__ == "__main__":
         detectShadows=False
     )
     MIN_MOTION_AREA = 500  # Minimum contour area to consider as motion
-    COOLDOWN = 2.0  # Seconds between motion triggers
-    last_motion_time = 0
     frame_count = 0
-    capture_pending = False
 
-    uri = "MONGODBURI"
+    uri = "mongodb+srv://johnsmith1january2000:a3mlYLp6QoCGcb2a@cluster0.4tz7xfs.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
     # Create a new client and connect to the server
     client = MongoClient(uri, server_api=ServerApi('1'))
-    db = client["MONGODB"]
+    db = client["trashDatabase"]
     collection = db["trashcans"]
     capture_counter = 0
 
@@ -73,8 +69,6 @@ if __name__ == "__main__":
             if not ret:
                 break
 
-            current_time = time.time()
-            
             # Process frame with background subtractor
             fg_mask = bg_subtractor.apply(frame)
             
@@ -92,88 +86,67 @@ if __name__ == "__main__":
                     break
             
             # If motion is detected and we're not in cooldown or already pending capture
-            if motion_detected and (current_time - last_motion_time >= COOLDOWN) and not capture_pending:
-                last_motion_time = current_time
-                capture_pending = True
+            if motion_detected:
+                # Wait for 3 seconds
+                time.sleep(3)
                 
-                # Inline implementation of capture_after_delay function
-                def inline_capture():
-                    global capture_pending, frame_count, capture_counter
-                    
-                    # Wait for 3 seconds
-                    time.sleep(3)
-                    
-                    # Capture the current frame
-                    ret, frame = cam.read()
-                    if not ret:
-                        capture_pending = False
-                        return
-                    
-                    # Save the image
-                    filename = os.path.join(OUTPUT_FOLDER, f"motion_{frame_count:04d}.jpg")
-                    ret, jpeg_buffer = cv2.imencode('.jpg', frame)
-                    if ret:
-                        with open(filename, 'wb') as f:
-                            f.write(jpeg_buffer.tobytes())
-                        print({filename})
-                        
-                        # Run prediction
-                        prediction = model.predict(filename)
-                        result = prediction.json()
-                            
-                        frame_count += 1
-                        last_capture_time = current_time
-                        predictionInfo = result.get("predictions")
-                        
-                        # Check if predictions exist
-                        if predictionInfo and len(predictionInfo) > 0 and capture_counter > 0:
-                            predictionInfo = predictionInfo[0].get("predictions")
-                            
-                            if predictionInfo and len(predictionInfo) > 0:
-                                className = predictionInfo[0].get("class")
-                                classId = predictionInfo[0].get("class_id")
-                                confidence = predictionInfo[0].get("confidence")
-                                recycleClasses = ["cardboard", "glass", "paper", "plastic"]
-
-                                # Write to Arduino 
-                                if className in recycleClasses:
-                                    ser.write(b"1\n")
-                                else:
-                                    ser.write(b"0\n")
-
-                                # await response
-                                lines = []
-                                while len(lines) < 2:
-                                    line = ser.readline().decode('utf-8').rstrip()
-                                    if ":" in line:
-                                        lines.append(line)
-                                    
-                                try:
-                                    collection.update_one(
-                                        {"_id": ObjectId("OBJECTID")},
-                                        {
-                                            "$push": {
-                                                "lastObjects": className,
-                                                "lastTime": datetime.now()
-                                            },
-                                            "$inc": {"capacity": 1}
-                                        }
-                                    )
-                                    print(f"Database updated for capture {capture_counter}")
-                                except Exception as e:
-                                    print(f"Error updating document: {e}")
-                    
-                    capture_pending = False
-                    capture_counter += 1
-
-
-    
+                # Capture the current frame
+                ret, frame = cam.read()
+                if not ret:
+                    raise Exception()
                 
-                # Start a thread for delayed capture
-                capture_thread = threading.Thread(target=inline_capture)
-                capture_thread.daemon = True
-                capture_thread.start()
-                
+                # Save the image
+                filename = os.path.join(OUTPUT_FOLDER, f"motion_{frame_count:04d}.jpg")
+                ret, jpeg_buffer = cv2.imencode('.jpg', frame)
+                if ret:
+                    with open(filename, 'wb') as f:
+                        f.write(jpeg_buffer.tobytes())
+                    print({filename})
+                    
+            
 
+                    # Run prediction
+                    image = PIL.Image.open(filename)
+                    google_client = genai.Client(api_key="AIzaSyAZSuxKfrMEs0qPuzXNZCqDFl5-xijUWYM")
+                    response = google_client.models.generate_content(
+                        model="gemini-2.0-flash",
+                        contents=["Use only ONE word to describe the object in this image (IGNORE THE BACKGROUND) that comes from these categories: [plastic, metal, glass, cloth, other].", image])
+                    frame_count += 1
+                    
+                    # Check if predictions exist
+                    response = response.text 
+                    if response.lower() in ["plastic", "glass", "cloth", "metal", "other"]:
+                            # Write to Arduino 
+                            if response.lower() in ["plastic", "glass", "metal"]:
+                                ser.write(b"1\n")
+                            else:
+                                ser.write(b"0\n")
+
+                            # await response
+                            lines = []
+                            while len(lines) < 2:
+                                line = ser.readline().decode('utf-8').rstrip()
+                                if ":" in line:
+                                    lines.append(line)
+
+                            capacity = (int(lines[0].split(":")[-1]) + int(lines[1].split(":")[-1]))
+                                
+                            try:
+                                collection.update_one(
+                                    {"_id": ObjectId("67e8bae3020bb4a8bde161ed")},
+                                    {
+                                        "$push": {
+                                            "lastObjects": response.lower(),
+                                            "lastTime": datetime.now()
+                                        },
+                                        "$set":{"capacity": capacity}
+                                    }
+                                )
+                                print(f"Database updated for capture {capture_counter}, class: {response.lower()}")
+                            except Exception as e:
+                                print(f"Error updating document: {e}")
+                
+                capture_counter += 1
+                motion_detected = False
     finally:
         cam.release()
