@@ -18,6 +18,7 @@ import { useState, useEffect } from 'react';
     const [trashcanData, setTrashcanData] = useState<TrashcanData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [filled, setFilled] = useState<number>(0);
   
     // Fetch data from the API
     useEffect(() => {
@@ -28,13 +29,18 @@ import { useState, useEffect } from 'react';
             
             const result = await response.json();
             
+            let count = 0
             if (result.success && result.data) {
               // Process the lastObjects data
               const objectCounts = result.data.lastObjects.reduce((acc: Record<string, number>, obj: string) => {
                 acc[obj] = (acc[obj] || 0) + 1; // Ensure value is always a number
+                count += 1;
                 return acc;
               }, {});
       
+            const capacity = result.data.capacity;
+            const numToBeRounded = count / capacity;
+            setFilled(Math.round(numToBeRounded * 100) / 100);
               // Convert to chart data format
               const processedData: ChartData[] = Object.entries(objectCounts).map(([name, value]) => ({
                 name: name.charAt(0).toUpperCase() + name.slice(1), // Capitalize name
@@ -73,7 +79,7 @@ import { useState, useEffect } from 'react';
                     <div className="flex flex-row justify-between">
                         <h1 className="text-xl font-bold mb-4">FlipCan #1942</h1>
                         <h1 className="text-xl font-bold mb-4">Location: Rice Hall</h1>
-                        <h1 className="text-xl font-bold mb-4">Filled: 60%</h1>
+                        <h1 className="text-xl font-bold mb-4">Filled: {filled}%</h1>
                     </div>
                     <BarChartComponent data={chartData} xAxisKey="name" yAxisKey="value" />
                     <LineChartComponent data={chartData} xAxisKey="name" yAxisKey="value" />
