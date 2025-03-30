@@ -4,11 +4,53 @@ import { Suspense } from 'react';
 import { useActionState } from 'react';
 import { authenticate } from '@/app/lib/actions';
 import { useSearchParams } from 'next/navigation';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+
+interface LoginResponse {
+  success: boolean;
+  message?: string;
+  data?: Record<string, unknown>;
+}
 
 export default function Login() {
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/monitor';
-  const [errorMessage, formAction, isPending] = useActionState(authenticate, undefined);
+  const router = useRouter();
+  const [username, setUsername] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [error, setError] = useState<string | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [callbackUrl, setCallbackURL] = useState<string>('/monitor')
+  const [errorMessage, setErrorMessage] = useState<string>('Please input valid data')
+  const [isPending, setIsPending] = useState<boolean>(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(undefined);
+
+    try {
+      const response = await fetch('/api/getUser', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data: LoginResponse = await response.json();
+
+      if (data.success) {
+        router.push('/monitor');
+      } else {
+        setError(data.message || 'Invalid credentials');
+      }
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+      console.error('Login error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="flex justify-center text-center absolute top-0 z-[-2] h-screen w-screen bg-[#000000] bg-[radial-gradient(#ffffff33_1px,#00091d_1px)] bg-[size:20px_20px]">
@@ -18,7 +60,7 @@ export default function Login() {
 
         {/* Login box */}
         <Suspense>
-          <form action={formAction} className="border-2 border-solid rounded-sm p-4 bg-white text-xl">
+          <form onSubmit={handleSubmit} className="border-2 border-solid rounded-sm p-4 bg-white text-xl">
             {/* Title */}
             <h2 className="font-bold text-3xl mb-4">Login</h2>
 
@@ -31,6 +73,8 @@ export default function Login() {
                 id="username"
                 type="text"
                 placeholder="Username"
+                value={username} // Controlled input
+                onChange={(e) => setUsername(e.target.value)}
                 required
               />
             </div>
@@ -42,6 +86,8 @@ export default function Login() {
                 id="password"
                 type="password"
                 placeholder="Password"
+                value={password} // Controlled input
+                onChange={(e) => setPassword(e.target.value)}
                 required
               />
             </div>
@@ -50,14 +96,14 @@ export default function Login() {
             <div className="flex items-center justify-between mt-6">
               <input type="hidden" name="redirectTo" value={callbackUrl} />
               <button
-                aria-disabled={isPending}
+                aria-disabled={isLoading}
                 className="bg-gray-800 hover:bg-black text-white font-bold py-2 px-4 rounded focus:shadow-outline"
                 type="submit"
               >
                 Sign In
               </button>
-              {errorMessage && (
-                <p className="text-sm text-red-500">{errorMessage}</p>
+              {error && (
+                <p className="text-sm text-red-500">{error}</p>
               )}
             </div>
           </form>
