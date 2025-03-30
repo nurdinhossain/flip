@@ -6,10 +6,7 @@ import roboflow
 import threading
 import serial
 import numpy as np
-import json
-import requests
 import datetime
-import process
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from datetime import datetime
