@@ -53,21 +53,31 @@ export default function Monitor() {
 
         // Process data for line chart (time-based aggregation)
         const dateTimes = result.data.lastTime.map((dt: string) => new Date(dt));
-        const startTime = Math.min(...dateTimes.map((dt: Date) => dt.getTime()));
-        const buckets: Record<number, number> = {};
+        const trashCounts = result.data.lastObjects.map(() => 1); // Assume each object contributes one unit of trash
 
-        dateTimes.forEach((dt: Date) => {
-          const minutesSinceStart = Math.floor((dt.getTime() - startTime) / (1000 * 60));
-          const bucketKey = Math.floor(minutesSinceStart / 2); // Group into 2-minute buckets
-          buckets[bucketKey] = (buckets[bucketKey] || 0) + 1; // Increment trash count for this bucket
+        // Calculate cumulative trash counts
+        let cumulativeTrashCounts: number[] = [];
+        trashCounts.reduce((acc: number, val: number) => {
+          cumulativeTrashCounts.push(acc + val);
+          return acc + val;
+        }, 0);
+
+        // Create even intervals (e.g., every 2 minutes)
+        const startTime = dateTimes[0].getTime();
+        const minutesSinceStart = dateTimes.map((dt: Date) => Math.floor((dt.getTime() - startTime) / (1000 * 60)));
+        const interval = 2; // Interval size in minutes
+        const maxTime = Math.ceil(Math.max(...minutesSinceStart));
+        const evenIntervals = Array.from({ length: Math.ceil(maxTime / interval) }, (_, i) => i * interval);
+
+        // Aggregate cumulative trash counts into these intervals
+        const aggregatedLineChartData: ChartData[] = evenIntervals.map((start, i) => {
+          const end = evenIntervals[i + 1] || maxTime; // Handle last interval
+          const trashInInterval =
+            Math.max(...cumulativeTrashCounts.filter((_, idx) => minutesSinceStart[idx] <= end)) || cumulativeTrashCounts[cumulativeTrashCounts.length - 1];
+          return { name: `${end} min`, value: trashInInterval };
         });
 
-        const processedLineChartData: ChartData[] = Object.entries(buckets).map(([bucket, value]) => ({
-          name: `${Number(bucket) * 2} min`, // Convert bucket to readable time interval
-          value: value as number,
-        }));
-
-        setLineChartData(processedLineChartData);
+        setLineChartData(aggregatedLineChartData);
         setTrashcanData(result.data);
       }
     } catch (err) {
@@ -77,19 +87,16 @@ export default function Monitor() {
     }
   };
 
-  // Fetch data from the API
   useEffect(() => {
     fetchData();
-    const interval = setInterval(() => fetchData(), 2000);
+    const intervalId = setInterval(() => fetchData(), 2000);
 
-    return () => {
-      clearInterval(interval);
-    };
+    return () => clearInterval(intervalId);
   }, []);
 
   if (loading) return <p className="text-white text-center mt-4">Loading...</p>;
   if (error) return <p className="text-red-500 text-center mt-4">{error}</p>;
-  
+
   return (
     <div className="absolute top-0 z-[0] h-screen w-screen overflow-hidden bg-[#000000] bg-[radial-gradient(#ffffff33_1px,#00091d_1px)] bg-[size:20px_20px]">
       <h1 className="text-white font-bold text-4xl underline m-4">Dashboard</h1>
