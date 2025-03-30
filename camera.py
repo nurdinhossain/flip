@@ -65,6 +65,21 @@ collection = db["trashcans"]
 capture_counter = 0
 
 isRecyclable = 0
+
+def rotateArduino(recylclable):
+    ser = serial.Serial('/dev/ttyACM1', 9600, timeout=1)
+    ser.flush()
+
+    if recylclable:
+        #rotate to the right
+        ser.write(b"1\n")
+    else:
+        #rotate to the left
+        ser.write(b"0\n")
+    time.sleep(3)
+
+
+
 try:
     while True:
         ret, frame = cam.read()
@@ -162,6 +177,6 @@ try:
             capture_thread.daemon = True
             capture_thread.start()
             
-
+            rotateArduino(isRecyclable)
 finally:
     cam.release()

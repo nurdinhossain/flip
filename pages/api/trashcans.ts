@@ -5,7 +5,7 @@ import { debugPort } from 'process';
 
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  console.log(`API Request: ${req.method} /api/users`);
+  console.log(`API Request: ${req.method} /api/trashcans`);
 
   try{
   const client = await clientPromise; // Connect to MongoDB

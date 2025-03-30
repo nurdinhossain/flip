@@ -30,17 +30,15 @@ export default function Monitor() {
 
       const result = await response.json();
 
-      let count = 0;
       if (result.success && result.data) {
         // Process the lastObjects data
         const objectCounts = result.data.lastObjects.reduce((acc: Record<string, number>, obj: string) => {
           acc[obj] = (acc[obj] || 0) + 1; // Ensure value is always a number
-          count += 1;
           return acc;
         }, {});
 
         const capacity = result.data.capacity;
-        const numToBeRounded = count / capacity;
+        const numToBeRounded =  capacity /110;
         setFilled(Math.round(numToBeRounded * 100) / 100);
 
         // Convert to chart data format for bar chart
